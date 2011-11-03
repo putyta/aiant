@@ -92,6 +92,40 @@ class PathFinder:
     trace.reverse()
     return trace
     
+  def getDirTo(self, mazei, start, objects, maxrad):
+    #food_loc = pf.getDirTo(self.maze, ant_loc, food_store, ants.viewradius2)
+    maze = mazei.getCopy()
+    nextPoints = [start]
+    found = False
+    wave = 1
+    x, y = start
+    maze[x][y] = wave
+    try:
+      while True:
+        if wave >= maxrad:
+          return start
+        curPoints = nextPoints
+        nextPoints = []
+        wave += 1
+        str = ''
+        for point in curPoints:
+          r, c = point
+          waveFront = [((r+x+self.rows)%self.rows, (c+y+self.cols)%self.cols) for x,y in [(0,1), (0,-1), (1,0), (-1,0)]]
+          for frontPoint in waveFront:
+            if frontPoint in objects:
+              log.write("FOUNT OBJECT: %d:%d\n" % frontPoint)
+              return frontPoint
+            x, y = frontPoint
+            if maze[x][y] == GRASS:
+              maze[x][y] = wave
+              nextPoints.append(frontPoint)
+        if len(nextPoints) == 0:
+          return start
+    except:
+      global log
+      traceback.print_exc(file=log)
+      return start
+
   def getDirection(self, mazei, start, target):
     if start == target:
       return [start]
@@ -118,7 +152,8 @@ class PathFinder:
           if maze[x][y] in [GRASS, UNEXPLORED]: #== GRASS:
             maze[x][y] = wave
             if frontPoint == target:
-              log.write("FOUND!!! %d:%d\n" % target)
+              log.write(Maze.renderMaze(maze))
+              log.write("FOUND!!! %d:%d, len: %d, points in front: %d\n" % (target+(wave, len(nextPoints))))
               found = True
               break
             nextPoints.append((x,y))
@@ -145,22 +180,16 @@ class PathFinder:
     wave = 1
     x, y = start
     maze[x][y] = wave
-    step = 0
     try:
       while True:
-        step += 1
         curPoints = nextPoints
         nextPoints = []
         wave += 1
-        str = ''
         for point in curPoints:
           r, c = point
-          if maze[r][c] == UNEXPLORED:
-            return point
           waveFront = [((r+x+self.rows)%self.rows, (c+y+self.cols)%self.cols) for x,y in [(0,1), (0,-1), (1,0), (-1,0)]]
           for frontPoint in waveFront:
             x, y = frontPoint
-            str += "%d," % maze[x][y]
             if maze[x][y] == UNEXPLORED:
               log.write("%d:%d -> %d:%d\n" % (start + frontPoint))
               return frontPoint
@@ -168,9 +197,7 @@ class PathFinder:
               maze[x][y] = wave
               nextPoints.append(frontPoint)
         if len(nextPoints) == 0:
-          log.write(str + "\n")
-          log.write("EVERYTHING HAS BEEN EXPLORED %d\n" % step)
-          log.write("--- 3 ---\n")
+          log.write("EVERYTHING HAS BEEN EXPLORED\n")
           return start
     except:
       global log
@@ -246,6 +273,7 @@ class MyBot:
 
         self.log.write("NEXT TURN----------- %d, %d\n" % (len(ants.my_ants()), self.turnCount))
         self.log.flush()
+        pf = PathFinder(self.maze.rows, self.maze.cols)
 
         #self.log.write("unexplored: %d\n" % len(self.maze.unexplored))
         #self.log.write(self.maze.renderTextMap())
@@ -257,9 +285,9 @@ class MyBot:
 
         targets = {}
         def do_move_location(loc, dest):
-            pf = PathFinder(self.maze.rows, self.maze.cols)
             trace = pf.getDirection(self.maze, loc, dest)
             if( len(trace) > 1):
+              log.write("DIR: %d:%d -> %d:%d\n" % (loc + trace[1]))
               directions = ants.direction(loc, trace[1])
             else:
               directions = ants.direction(loc, dest)
@@ -272,36 +300,43 @@ class MyBot:
           orders = {}
           def do_move_direction(loc, direction):
               new_loc = ants.destination(loc, direction)
-              if (ants.unoccupied(new_loc) and new_loc not in orders):
+              log.write("ORDER: %d:%d -> %d:%d\n" % (loc + new_loc))
+              ants.issue_order((loc, direction))
+              orders[new_loc] = loc
+              return True
+#???????????????????????????????????
+              if True:
+                #if (ants.unoccupied(new_loc) and new_loc not in orders):
+                if new_loc not in orders:
+                  #log.write("ORDER: %d:%d -> %d:%d\n" % (loc + new_loc))
                   ants.issue_order((loc, direction))
                   orders[new_loc] = loc
                   return True
-              else:
+                else:
+                  #log.write("OCCUPIED: %d:%d\n" % new_loc)
                   return False
 
           # prevent stepping on own hill
           for hill_loc in ants.my_hills():
             orders[hill_loc] = None
 
-          lastExplorer = len(ants.my_ants())/10
+          lastExplorer = 0 #min(5, len(ants.my_ants())/10+1)
           explorers = ants.my_ants()[:lastExplorer]
           harvesters = ants.my_ants()[lastExplorer:]
           if len(self.maze.unexplored) > 0:
             for explorer in explorers:
-              pf = PathFinder(self.maze.rows, self.maze.cols)
               unexpLand = pf.getClosestUnexplored(self.maze, explorer)
               log.write("EXPLORE: %s:%s\n" % (str(explorer),str(unexpLand)))
               #log.write(self.maze.renderTextMap())
               do_move_location(explorer, unexpLand)
 
           # find close food
-          if True:
+          if False:
             ant_dist = []
             for ant_loc in harvesters:
               for food_loc in ants.food():
                   #if ants.distance(ant_loc, food_loc) > 5:
                   #  continue
-                  pf = PathFinder(self.maze.rows, self.maze.cols)
                   trace = pf.getDirection(self.maze, ant_loc, food_loc)
                   if(len(trace) > 1):
                     dist = len(trace) #ants.distance(ant_loc, food_loc)
@@ -312,6 +347,23 @@ class MyBot:
             for dist, ant_loc, food_loc in ant_dist:
                 if food_loc not in targets and ant_loc not in targets.values():
                   do_move_location(ant_loc, food_loc)
+          #version #2
+          if True:
+#            food -> []
+#            for each ant:
+#              is there any food in raidius viewradius2 from me?:
+#                yes -> go thete and remove this piece of food from food
+#                no -> go exploring
+            
+            food_store = ants.food()[:]
+            for ant_loc in harvesters:
+              food_loc = pf.getDirTo(self.maze, ant_loc, food_store, ants.viewradius2)
+              if food_loc <> ant_loc:
+                do_move_location(ant_loc, food_loc)
+                food_store.remove(food_loc)
+              else:
+                unexpLand = pf.getClosestUnexplored(self.maze, ant_loc)
+                do_move_location(ant_loc, unexpLand)
 
 
           # unblock own hill
