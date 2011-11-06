@@ -10,7 +10,7 @@ log = None
 OBSTACLE = 65536
 GRASS = 0
 UNEXPLORED = -1
-MAP_RENDER = ' ' + ''.join(['+' for i in range(0, OBSTACLE-1)]) + '%' + '*'
+MAP_RENDER = ' ' + '@' +''.join(['+' for i in range(1, OBSTACLE-1)]) + '%' + '*'
 
 class Maze:
   def __init__(self, rows, cols):
@@ -67,8 +67,10 @@ class Maze:
     tmp += '   %s\n' % ''.join([str(i%10) for i in range(0, cols)])
     i = 0
     for row in maze:
-      tmp += '%d %s\n' % (i,''.join([MAP_RENDER[col] for col in row]))
+      tmp += '%02d %s\n' % (i,''.join([MAP_RENDER[col] for col in row]))
       i += 1
+    tmp += '   %s\n' % ''.join([str(i%10) for i in range(0, cols)])
+    tmp += '   %s\n' % ''.join([str(f(i)) for i in range(0, cols)])
     return tmp
 
 
@@ -149,7 +151,7 @@ class PathFinder:
         for frontPoint in waveFront:
           lastPoint = frontPoint
           x, y = frontPoint
-          if maze[x][y] in [GRASS, UNEXPLORED]: #== GRASS:
+          if maze[x][y] == GRASS: #in [GRASS, UNEXPLORED]:
             maze[x][y] = wave
             if frontPoint == target:
               log.write(Maze.renderMaze(maze))
@@ -161,8 +163,8 @@ class PathFinder:
           break
       if not found and len(nextPoints) == 0:
         log.write("UNABLE TO DESIDE %d:%d\n" % lastPoint)
-        log.write(Maze.renderMaze(maze))
-        return [lastPoint]
+        #log.write(Maze.renderMaze(maze))
+        return self.getTrace(maze, start, lastPoint) #[lastPoint]
     try:
       trace = self.getTrace(maze, start, target)
       #self.saveMaze(maze, start, target, trace)
