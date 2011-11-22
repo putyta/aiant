@@ -12,6 +12,7 @@ GRASS = 0
 UNEXPLORED = -1
 MAP_RENDER = ' ' + '@' +''.join(['+' for i in range(1, OBSTACLE-1)]) + '%' + '*'
 
+#==================================================== ЛАБИРИНТ
 class Maze:
   def __init__(self, rows, cols):
     """Инициализация карты rows x cols
@@ -73,7 +74,7 @@ class Maze:
     tmp += '   %s\n' % ''.join([str(f(i)) for i in range(0, cols)])
     return tmp
 
-
+#============================================= ПОИСК ПУТИ
 class PathFinder:
   def __init__(self, rows, cols):
     self.rows = rows
@@ -96,6 +97,7 @@ class PathFinder:
     
   def getDirTo(self, mazei, start, objects, maxrad):
     #food_loc = pf.getDirTo(self.maze, ant_loc, food_store, ants.viewradius2)
+    global log
     maze = mazei.getCopy()
     nextPoints = [start]
     found = False
@@ -124,11 +126,11 @@ class PathFinder:
         if len(nextPoints) == 0:
           return start
     except:
-      global log
       traceback.print_exc(file=log)
       return start
 
   def getDirection(self, mazei, start, target):
+    global log
     if start == target:
       return [start]
     maze = mazei.getCopy()
@@ -169,11 +171,11 @@ class PathFinder:
       trace = self.getTrace(maze, start, target)
       #self.saveMaze(maze, start, target, trace)
     except:
-      global log
       traceback.print_exc(file=log)
     return trace
 
   def getClosestUnexplored(self, mazei, start):
+    global log
     maze = mazei.getCopy()
     #log.write(mazei.renderTextMap())
     #log.flush()
@@ -202,7 +204,6 @@ class PathFinder:
           log.write("EVERYTHING HAS BEEN EXPLORED\n")
           return start
     except:
-      global log
       traceback.print_exc(file=log)
       return start
 
@@ -255,6 +256,7 @@ class PathFinder:
     f.flush()
     f.close()
 
+#================================================================================================================
 class MyBot:
     def __init__(self):
         self.log = open("LOG.LOG", "w+")
@@ -268,6 +270,7 @@ class MyBot:
         self.maze = Maze(ants.rows, ants.cols)
         pass
     
+    #============================== СЛЕДУЮЩИЙ ХОД
     def do_turn(self, ants):
         self.turnCount += 1
         # обновление карты
