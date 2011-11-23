@@ -164,9 +164,9 @@ class PathFinder:
         if found:
           break
       if not found and len(nextPoints) == 0:
-        log.write("UNABLE TO DESIDE %d:%d\n" % lastPoint)
-        #log.write(Maze.renderMaze(maze))
-        return self.getTrace(maze, start, lastPoint) #[lastPoint]
+        log.write("UNABLE TO DESIDE (%d:%d)->(%d:%d)\n" % (start + lastPoint))
+        log.flush()
+        return [start]
     try:
       trace = self.getTrace(maze, start, target)
       #self.saveMaze(maze, start, target, trace)
@@ -177,8 +177,6 @@ class PathFinder:
   def getClosestUnexplored(self, mazei, start):
     global log
     maze = mazei.getCopy()
-    #log.write(mazei.renderTextMap())
-    #log.flush()
     nextPoints = [start]
     found = False
     wave = 1
@@ -277,7 +275,6 @@ class MyBot:
         self.maze.update(ants)
 
         self.log.write("NEXT TURN----------- %d, %d\n" % (len(ants.my_ants()), self.turnCount))
-        self.log.flush()
         pf = PathFinder(self.maze.rows, self.maze.cols)
 
         #self.log.write("unexplored: %d\n" % len(self.maze.unexplored))
@@ -292,7 +289,6 @@ class MyBot:
         def do_move_location(loc, dest):
             trace = pf.getDirection(self.maze, loc, dest)
             if( len(trace) > 1):
-              log.write("DIR: %d:%d -> %d:%d\n" % (loc + trace[1]))
               directions = ants.direction(loc, trace[1])
             else:
               directions = ants.direction(loc, dest)
@@ -361,6 +357,7 @@ class MyBot:
 #                no -> go exploring
             
             food_store = ants.food()[:]
+            count = 0
             for ant_loc in harvesters:
               food_loc = pf.getDirTo(self.maze, ant_loc, food_store, ants.viewradius2)
               if food_loc <> ant_loc:
@@ -391,11 +388,6 @@ class MyBot:
 #          ant_dist.sort()
 #          for dist, ant_loc in ant_dist:
 #              do_move_location(ant_loc, hill_loc)
-
-
-
-
-
         except:
           #self.log.write("EXCEPTION: %s\n" % sys.exc_info()[1])
           traceback.print_exc(file=self.log)
