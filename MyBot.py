@@ -8,6 +8,7 @@ import copy
 log = None
 
 OBSTACLE = 65536
+MYANT = 65535
 GRASS = 0
 UNEXPLORED = -1
 MAP_RENDER = ' ' + '@' +''.join(['+' for i in range(1, OBSTACLE-1)]) + '%' + '*'
@@ -156,15 +157,16 @@ class PathFinder:
           if maze[x][y] == GRASS: #in [GRASS, UNEXPLORED]:
             maze[x][y] = wave
             if frontPoint == target:
-              log.write(Maze.renderMaze(maze))
-              log.write("FOUND!!! %d:%d, len: %d, points in front: %d\n" % (target+(wave, len(nextPoints))))
+              #log.write(Maze.renderMaze(maze))
+              #log.write("FOUND!!! %d:%d, len: %d, points in front: %d\n" % (target+(wave, len(nextPoints))))
               found = True
               break
             nextPoints.append((x,y))
         if found:
           break
       if not found and len(nextPoints) == 0:
-        log.write("UNABLE TO DESIDE (%d:%d)->(%d:%d)\n" % (start + lastPoint))
+        log.write("UNABLE TO DESIDE (%d:%d)->(%d:%d), (%d:%d)\n" % (start + target + lastPoint))
+        log.write(Maze.renderMaze(maze))
         log.flush()
         return [start]
     try:
@@ -277,14 +279,6 @@ class MyBot:
         self.log.write("NEXT TURN----------- %d, %d\n" % (len(ants.my_ants()), self.turnCount))
         pf = PathFinder(self.maze.rows, self.maze.cols)
 
-        #self.log.write("unexplored: %d\n" % len(self.maze.unexplored))
-        #self.log.write(self.maze.renderTextMap())
-        #self.log.flush()
-#        self.unseen = []
-#        for row in range(ants.rows):
-#            for col in range(ants.cols):
-#                self.unseen.append((row, col))
-
         targets = {}
         def do_move_location(loc, dest):
             trace = pf.getDirection(self.maze, loc, dest)
@@ -298,30 +292,34 @@ class MyBot:
                     return True
             return False
         try:
+          ordersMap = self.maze.getCopy()
           orders = {}
           def do_move_direction(loc, direction):
               new_loc = ants.destination(loc, direction)
               log.write("ORDER: %d:%d -> %d:%d\n" % (loc + new_loc))
               ants.issue_order((loc, direction))
               orders[new_loc] = loc
-              return True
+              x, y = new_loc
+              #return True
 #???????????????????????????????????
               if True:
-                #if (ants.unoccupied(new_loc) and new_loc not in orders):
-                if new_loc not in orders:
+                if (ants.unoccupied(new_loc) and new_loc not in orders):
+                #if(ordersMap[x][y] == GRASS):
+                #  ordersMap[x][y] = MYANT
+                #if new_loc not in orders:
                   #log.write("ORDER: %d:%d -> %d:%d\n" % (loc + new_loc))
                   ants.issue_order((loc, direction))
                   orders[new_loc] = loc
                   return True
                 else:
-                  #log.write("OCCUPIED: %d:%d\n" % new_loc)
+                  log.write("OCCUPIED: %d:%d\n" % new_loc)
                   return False
 
           # prevent stepping on own hill
           for hill_loc in ants.my_hills():
             orders[hill_loc] = None
 
-          lastExplorer = 0 #min(5, len(ants.my_ants())/10+1)
+          lastExplorer =  0 #len(ants.my_ants())/10+1
           explorers = ants.my_ants()[:lastExplorer]
           harvesters = ants.my_ants()[lastExplorer:]
           if len(self.maze.unexplored) > 0:
@@ -363,9 +361,11 @@ class MyBot:
               if food_loc <> ant_loc:
                 do_move_location(ant_loc, food_loc)
                 food_store.remove(food_loc)
+                self.log.write("FOOD: (%d:%d)->(%d:%d)\n" % (ant_loc + food_loc))
               else:
                 unexpLand = pf.getClosestUnexplored(self.maze, ant_loc)
                 do_move_location(ant_loc, unexpLand)
+                self.log.write("EXPL: (%d:%d)->(%d:%d)\n" % (ant_loc + food_loc))
 
 
           # unblock own hill
