@@ -152,15 +152,14 @@ class PathFinder:
         r, c = point
         waveFront = [((r+x+self.rows)%self.rows, (c+y+self.cols)%self.cols) for x,y in [(0,1), (0,-1), (1,0), (-1,0)]]
         for frontPoint in waveFront:
-          lastPoint = frontPoint
           x, y = frontPoint
+          if frontPoint == target:
+            maze[x][y] = wave # не смотря на то, что это может быть не GRASS!
+            found = True
+            break
+          lastPoint = frontPoint
           if maze[x][y] == GRASS: #in [GRASS, UNEXPLORED]:
             maze[x][y] = wave
-            if frontPoint == target:
-              #log.write(Maze.renderMaze(maze))
-              #log.write("FOUND!!! %d:%d, len: %d, points in front: %d\n" % (target+(wave, len(nextPoints))))
-              found = True
-              break
             nextPoints.append((x,y))
         if found:
           break
@@ -366,6 +365,7 @@ class MyBot:
                 unexpLand = pf.getClosestUnexplored(self.maze, ant_loc)
                 do_move_location(ant_loc, unexpLand)
                 self.log.write("EXPL: (%d:%d)->(%d:%d)\n" % (ant_loc + food_loc))
+              break
 
 
           # unblock own hill
